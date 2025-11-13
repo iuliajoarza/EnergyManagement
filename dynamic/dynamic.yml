@@ -1,0 +1,109 @@
+http:
+  middlewares:
+    basic-auth:
+      basicAuth:
+        users:
+          - "user:$2y$10$ti0r3TLBJ4FP2sNPm7FEUOH0.s5U7iH7a7HHG5gq3LSzHwkYRB/."  # user:test
+
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+  routers:
+    # Frontend - highest priority
+    frontend-app:
+      rule: "Host(`localhost`) && !PathPrefix(`/api`)"
+      service: frontend-service
+      entryPoints:
+        - web
+      priority: 1
+
+    # API routes with authentication
+    api-people:
+      rule: "Host(`localhost`) && PathPrefix(`/api/people`)"
+      service: people-service
+      middlewares:
+        - strip-api-prefix
+      entryPoints:
+        - web
+      priority: 100
+
+    api-devices:
+      rule: "Host(`localhost`) && PathPrefix(`/api/device`)"
+      service: devices-service
+      middlewares:
+        - strip-api-prefix
+      entryPoints:
+        - web
+      priority: 100
+
+    api-auth:
+      rule: "Host(`localhost`) && PathPrefix(`/api/auth`)"
+      service: auth-service
+      middlewares:
+        - strip-api-prefix
+      entryPoints:
+        - web
+      priority: 100
+
+    # Swagger UI routes - higher priority, NO middleware stripping
+    swagger-auth:
+      rule: "Host(`localhost`) && (PathPrefix(`/api/auth/swagger-ui`) || PathPrefix(`/api/auth/v3/api-docs`))"
+      service: auth-service-swagger
+      entryPoints:
+        - web
+      priority: 200
+
+    swagger-people:
+      rule: "Host(`localhost`) && (PathPrefix(`/api/people/swagger-ui`) || PathPrefix(`/api/people/v3/api-docs`))"
+      service: people-service-swagger
+      entryPoints:
+        - web
+      priority: 200
+
+    swagger-devices:
+      rule: "Host(`localhost`) && (PathPrefix(`/api/device/swagger-ui`) || PathPrefix(`/api/device/v3/api-docs`))"
+      service: devices-service-swagger
+      entryPoints:
+        - web
+      priority: 200
+
+  services:
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"
+
+    people-service:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo1:8080"
+
+    devices-service:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo2:8080"
+
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8080"
+    
+    # Swagger services with full path forwarding
+    people-service-swagger:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo1:8080"
+
+    devices-service-swagger:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo2:8080"
+
+    auth-service-swagger:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8080"
+
+

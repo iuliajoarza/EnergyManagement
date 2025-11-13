@@ -1,0 +1,64 @@
+http:
+  middlewares:
+    auth-basic:
+      basicAuth:
+        users:
+          - "user:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+    strip-people-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    strip-devices-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    strip-auth-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+  services:
+    people-service:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo1:8080"
+    devices-service:
+      loadBalancer:
+        servers:
+          - url: "http://spring-demo2:8080"
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8080"
+  
+
+  routers:
+    
+      
+
+    people-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/user`)"
+      entryPoints:
+        - web
+      service: people-service
+      middlewares:
+        - "strip-people-prefix@file"
+      priority: 10
+
+    devices-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/device`)"
+      entryPoints:
+        - web
+      service: devices-service
+      middlewares:
+        - "strip-devices-prefix@file"
+      priority: 10
+
+    auth-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/auth`)"
+      entryPoints:
+        - web
+      service: auth-service
+      middlewares:
+        - "strip-auth-prefix@file"
+      priority: 10

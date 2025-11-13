@@ -1,0 +1,349 @@
+================================================================================
+                    API TESTING EXAMPLES - ALL ENDPOINTS
+================================================================================
+
+BASE URL: http://localhost
+Toate request-urile trec prin Traefik Reverse Proxy
+
+================================================================================
+🔐 1. AUTHENTICATION SERVICE - /api/auth
+================================================================================
+
+--- 1.1 Register New User ---
+POST http://localhost/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "Test123!",
+  "role": "USER"
+}
+
+--- 1.2 Login (Get JWT Token) ---
+POST http://localhost/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+Response: { "jwt": "eyJhbGciOiJIUzI1NiIsInR5..." }
+☝️ Copiază JWT-ul și folosește-l în header-ul Authorization pentru celelalte request-uri!
+
+--- 1.3 Validate JWT Token ---
+POST http://localhost/api/auth/validate
+Content-Type: application/json
+
+{
+  "token": "your-jwt-token-aici"
+}
+
+Response: { "valid": true, "username": "admin", "role": "ADMIN" }
+
+
+================================================================================
+👥 2. PEOPLE MANAGEMENT SERVICE - /api/user
+================================================================================
+
+--- 2.1 Get All People (Admin) / Get Self (User) ---
+GET http://localhost/api/user
+Authorization: Bearer your-jwt-token-aici
+
+Response (Admin): Array de users
+Response (User): Doar datele proprii
+
+--- 2.2 Get Person by ID ---
+GET http://localhost/api/user/{id}
+Authorization: Bearer your-jwt-token-aici
+
+Exemplu: GET http://localhost/api/user/123e4567-e89b-12d3-a456-426614174000
+
+--- 2.3 Get Person by Username ---
+GET http://localhost/api/user?username={username}
+Authorization: Bearer your-jwt-token-aici
+
+Exemplu: GET http://localhost/api/user?username=johndoe
+
+--- 2.4 Create New Person (Admin only) ---
+POST http://localhost/api/user
+Authorization: Bearer your-jwt-token-aici
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "name": "John Doe",
+  "address": "123 Main Street",
+  "age": 30
+}
+
+NOTĂ: NU trebuie să trimiți "role" aici! 
+Role-ul se setează în AuthService la Register (1.1)
+
+Response: 201 Created
+Location: http://localhost/api/user/{uuid-generat}
+
+--- 2.5 Update Person ---
+PUT http://localhost/api/user/{id}
+Authorization: Bearer your-jwt-token-aici
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "name": "John Doe Updated",
+  "address": "456 Oak Avenue",
+  "age": 31
+}
+
+NOTĂ: NU include "role" - nu face parte din PersonDetailsDTO!
+
+Exemplu: PUT http://localhost/api/user/123e4567-e89b-12d3-a456-426614174000
+
+--- 2.6 Delete Person (Admin only) ---
+DELETE http://localhost/api/user/{id}
+Authorization: Bearer your-jwt-token-aici
+
+Exemplu: DELETE http://localhost/api/user/123e4567-e89b-12d3-a456-426614174000
+
+
+================================================================================
+📱 3. DEVICE MANAGEMENT SERVICE - /api/device
+================================================================================
+
+--- 3.1 Get All Devices ---
+GET http://localhost/api/device/device
+Authorization: Bearer your-jwt-token-aici
+
+Admin: Vede toate device-urile
+User: Vede doar device-urile proprii
+
+--- 3.2 Get Device by ID ---
+GET http://localhost/api/device/device/{id}
+Authorization: Bearer your-jwt-token-aici
+
+Exemplu: GET http://localhost/api/device/device/987e6543-e21b-12d3-a456-426614174000
+
+--- 3.3 Get Devices by User ID (Admin only) ---
+GET http://localhost/api/device/device?userId={userId}
+Authorization: Bearer your-jwt-token-aici
+
+Exemplu: GET http://localhost/api/device/device?userId=123e4567-e89b-12d3-a456-426614174000
+
+--- 3.4 Create Device (Admin only) ---
+POST http://localhost/api/device/device
+Authorization: Bearer your-jwt-token-aici
+Content-Type: application/json
+
+{
+  "name": "Smart Thermostat",
+  "maxConsumption": 2.5,
+  "userId": "123e4567-e89b-12d3-a456-426614174000"
+}
+
+Response: 201 Created
+Location: http://localhost/api/device/device/{uuid-generat}
+
+--- 3.5 Create Device without User (Admin only) ---
+POST http://localhost/api/device/device
+Authorization: Bearer your-jwt-token-aici
+Content-Type: application/json
+
+{
+  "name": "Unassigned Device",
+  "maxConsumption": 1.5,
+  "userId": null
+}
+
+Response: 201 Created
+
+--- 3.6 Update Device ---
+PUT http://localhost/api/device/device/{id}
+Authorization: Bearer your-jwt-token-aici
+Content-Type: application/json
+
+{
+  "name": "Smart Thermostat v2",
+  "maxConsumption": 3.0,
+  "userId": "123e4567-e89b-12d3-a456-426614174000"
+}
+
+Exemplu: PUT http://localhost/api/device/device/987e6543-e21b-12d3-a456-426614174000
+
+--- 3.7 Delete Device ---
+DELETE http://localhost/api/device/device/{id}
+Authorization: Bearer your-jwt-token-aici
+
+Dacă device are userId: device-ul este detașat (userId = null)
+Dacă device NU are userId: device-ul este șters complet
+
+Exemplu: DELETE http://localhost/api/device/device/987e6543-e21b-12d3-a456-426614174000
+
+--- 3.8 Delete All User Devices (Admin only) ---
+DELETE http://localhost/api/device/device/user/{userId}
+Authorization: Bearer your-jwt-token-aici
+
+Șterge TOATE device-urile unui user specific
+
+Exemplu: DELETE http://localhost/api/device/device/user/123e4567-e89b-12d3-a456-426614174000
+
+--- 3.9 Detach Devices from User (Admin only) ---
+PATCH http://localhost/api/device/device/user/{userId}/detach
+Authorization: Bearer your-jwt-token-aici
+
+Detașează TOATE device-urile unui user (setează userId = null)
+Device-urile rămân în sistem dar nu mai au owner
+
+Exemplu: PATCH http://localhost/api/device/device/user/123e4567-e89b-12d3-a456-426614174000/detach
+
+
+================================================================================
+📝 WORKFLOW DE TESTARE RECOMANDAT
+================================================================================
+
+PASUL 1: Login și salvează JWT
+-------------------------------
+POST http://localhost/api/auth/login
+Body: { "username": "admin", "password": "admin123" }
+→ Copiază JWT din răspuns
+
+PASUL 2: Creează un User în AuthService APOI în People Service
+----------------------------------------------------------------
+2a. Register în AuthService (creează contul):
+POST http://localhost/api/auth/register
+Body: {
+  "username": "johndoe",
+  "password": "JohnPass123!",
+  "role": "USER"
+}
+
+2b. Creează Person în People Service:
+POST http://localhost/api/user
+Header: Authorization: Bearer {jwt-din-pasul-1}
+Body: {
+  "username": "johndoe",
+  "name": "John Doe",
+  "address": "123 Main St",
+  "age": 30
+}
+→ Salvează USER_ID din header Location sau face GET cu username
+
+PASUL 3: Creează Device pentru User
+------------------------------------
+POST http://localhost/api/device/device
+Header: Authorization: Bearer {jwt-din-pasul-1}
+Body: {
+  "name": "Smart Thermostat",
+  "maxConsumption": 2.5,
+  "userId": "{USER_ID-din-pasul-2}"
+}
+→ Salvează DEVICE_ID din header Location
+
+PASUL 4: Verifică Device-urile User-ului
+-----------------------------------------
+GET http://localhost/api/device/device?userId={USER_ID-din-pasul-2}
+Header: Authorization: Bearer {jwt-din-pasul-1}
+→ Ar trebui să vezi device-ul creat la pasul 3
+
+PASUL 5: Actualizează Device
+-----------------------------
+PUT http://localhost/api/device/device/{DEVICE_ID-din-pasul-3}
+Header: Authorization: Bearer {jwt-din-pasul-1}
+Body: {
+  "name": "Smart Thermostat v2",
+  "maxConsumption": 3.5,
+  "userId": "{USER_ID-din-pasul-2}"
+}
+
+PASUL 6: Detașează Device-ul de la User
+----------------------------------------
+DELETE http://localhost/api/device/device/{DEVICE_ID-din-pasul-3}
+Header: Authorization: Bearer {jwt-din-pasul-1}
+→ Device-ul devine detașat (userId = null)
+
+PASUL 7: Șterge User-ul
+------------------------
+DELETE http://localhost/api/user/{USER_ID-din-pasul-2}
+Header: Authorization: Bearer {jwt-din-pasul-1}
+
+
+================================================================================
+🔍 TESTE PENTRU ROLURI (RBAC)
+================================================================================
+
+--- Test 1: User normal NU poate crea alți useri ---
+1. Login ca User: POST /api/auth/login cu credențiale User
+2. Încearcă: POST /api/user
+   Rezultat așteptat: 403 Forbidden
+
+--- Test 2: User normal vede doar device-urile lui ---
+1. Login ca User
+2. GET /api/device/device
+   Rezultat: Doar device-urile cu userId = id-ul user-ului
+
+--- Test 3: Admin vede toate device-urile ---
+1. Login ca Admin
+2. GET /api/device/device
+   Rezultat: TOATE device-urile din sistem
+
+--- Test 4: User NU poate șterge device-urile altora ---
+1. Login ca User1
+2. Încearcă: DELETE /api/device/device/{device-id-al-user2}
+   Rezultat așteptat: 403 Forbidden sau 404 Not Found
+
+
+================================================================================
+⚠️ NOTIȚE IMPORTANTE
+================================================================================
+
+1. JWT Token expirare: Token-ul poate expira! Dacă primești 401 Unauthorized,
+   refă login și ia un token nou.
+
+2. UUID Format: ID-urile sunt UUID-uri (ex: 123e4567-e89b-12d3-a456-426614174000)
+
+3. Roles disponibile: "ADMIN" sau "USER"
+
+4. Authorization Header: Întotdeauna "Bearer {token}", NU uita spațiul!
+
+5. Content-Type: Pentru POST/PUT request-uri, setează "application/json"
+
+6. Delete vs Detach:
+   - DELETE device cu userId → detașează (userId = null)
+   - DELETE device fără userId → șterge complet
+   - PATCH /detach → detașează toate device-urile unui user
+
+7. Default Admin Credentials:
+   Username: admin
+   Password: admin123
+
+
+================================================================================
+🌐 SWAGGER UI URLs (pentru testare interactivă)
+================================================================================
+
+Authentication Service:
+http://localhost/api/auth/swagger-ui.html
+
+People Management Service:
+http://localhost/api/user/swagger-ui.html
+
+Device Management Service:
+http://localhost/api/device/swagger-ui.html
+
+
+================================================================================
+📊 RESPONSE STATUS CODES
+================================================================================
+
+200 OK          - Request success
+201 Created     - Resource created successfully
+204 No Content  - Delete success (no body)
+400 Bad Request - Date invalide în request
+401 Unauthorized - Token lipsă sau invalid
+403 Forbidden   - Nu ai permisiuni pentru această acțiune
+404 Not Found   - Resource nu există
+500 Server Error - Eroare pe server
+
+
+================================================================================
+                            END OF EXAMPLES
+================================================================================

@@ -1,93 +1,358 @@
-# DS2025_30242_Joarza_Iulia_Maria
+# Demo — Spring Boot API with React Frontend
 
+A microservices project with Spring Boot REST APIs (people and device services) and a React frontend. Includes PostgreSQL databases, authentication, and Traefik routing.
 
+## Contents
 
-## Getting started
+- **Backend Services**: People Service, Device Service, Auth Service
+- **Frontend**: React SPA with authentication and CRUD operations
+- **Database**: PostgreSQL for each service
+- **Proxy**: Traefik for routing and load balancing
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+## Project structure
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/ds2025_30242_joarza_iulia_maria/ds2025_30242_joarza_iulia_maria.git
-git branch -M main
-git push -uf origin main
+demo/
+├── .mvn
+│   └── wrapper
+│       └── maven-wrapper.properties
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com
+│   │   │       └── example
+│   │   │           └── demo
+│   │   │               ├── controllers
+│   │   │               │   └── PersonController.java
+│   │   │               ├── dtos
+│   │   │               │   ├── builders
+│   │   │               │   │   └── PersonBuilder.java
+│   │   │               │   ├── validators
+│   │   │               │   │   ├── annotation
+│   │   │               │   │   │   └── AgeLimit.java
+│   │   │               │   │   └── AgeValidator.java
+│   │   │               │   ├── PersonDetailsDTO.java
+│   │   │               │   └── PersonDTO.java
+│   │   │               ├── entities
+│   │   │               │   └── Person.java
+│   │   │               ├── handlers
+│   │   │               │   ├── exceptions
+│   │   │               │   │   └── model
+│   │   │               │   │       ├── CustomException.java
+│   │   │               │   │       ├── ExceptionHandlerResponseDTO.java
+│   │   │               │   │       └── ResourceNotFoundException.java
+│   │   │               │   └── RestExceptionHandler.java
+│   │   │               ├── repositories
+│   │   │               │   └── PersonRepository.java
+│   │   │               ├── services
+│   │   │               │   └── PersonService.java
+│   │   │               └── DemoApplication.java
+│   │   └── resources
+│   │       ├── static
+│   │       ├── templates
+│   │       └── application.properties
+│   └── test
+│       └── java
+│           └── com
+│               └── example
+│                   └── demo
+│                       └── DemoApplicationTests.java
+├── .gitattributes
+├── .gitignore
+├── HELP.md
+├── mvnw
+├── mvnw.cmd
+├── pom.xml
+└── postman_collection.json
 ```
 
-## Integrate with your tools
+- `src/main/...` — SpringBoot source
+- `src/main/resources/application.properties` — app configuration
+- `postman_collection.json` — Postman collection to import
+- `pom.xml` — Maven project wht Spring Boot 4.0.0-SNAPSHOT and Java 25
 
-- [ ] [Set up project integrations](https://gitlab.com/ds2025_30242_joarza_iulia_maria/ds2025_30242_joarza_iulia_maria/-/settings/integrations)
+## Prerequisites
+- **Java JDK 25**
+- **PostgreSQL** server accessible from the app (can be changed to any other db from application.properties)
+- **Postman** account to import & run the test collection
 
-## Collaborate with your team
+## Database (PostgreSQL) — ( !!! Create it first !!!)
+The app expects a PostgreSQL database to already exist. Default connection values:
+```
+DB_IP=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=root
+DB_DBNAME=example-db
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+> Note: Hibernate is set to `spring.jpa.hibernate.ddl-auto=update`, so tables will be created/updated automatically on first run
 
-## Test and Deploy
+## Configuration
+All important settings are in `src/main/resources/application.properties`. You can override them via environment variables:
 
-Use the built-in continuous integration in GitLab.
+| Purpose | Property | Env var | Default |
+|---|---|---|---|
+| DB host | `database.ip` | `DB_IP` | `localhost` |
+| DB port | `database.port` | `DB_PORT` | `5432` |
+| DB user | `database.user` | `DB_USER` | `postgres` |
+| DB password | `database.password` | `DB_PASSWORD` | `root` |
+| DB name | `database.name` | `DB_DBNAME` | `example-db` |
+| HTTP port | `server.port` | `PORT` | `8080` |
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Effective JDBC URL:
+```
+jdbc:postgresql://${DB_IP}:${DB_PORT}/${DB_DBNAME}
+```
 
-***
+## How to run (local)
+From the project root (`demo/`), run with the Maven Wrapper:
 
-# Editing this README
+```bash
+# 1) export env vars if you need non-defaults
+export DB_IP=localhost
+export DB_PORT=5432
+export DB_USER=postgres
+export DB_PASSWORD=root
+export DB_DBNAME=example-db
+export PORT=8080
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+# 2) start the app
+./mvnw spring-boot:run
+```
 
-## Suggestions for a good README
+The app will start on: **http://localhost:8080** (unless you changed `PORT`).
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## API quick peek
+The included Postman collection targets the **people** resource defined by the **Person** entity.
+Examples once the app is running:
+- `GET /people` — list all
+- `POST /people` — create (body: JSON person)
+- `GET /people/{personId}` — fetch one
+- `PUT /people/{personId}` — update
+- `DELETE /people/{personId}` — delete
 
-## Name
-Choose a self-explaining name for your project.
+## Test with Postman
+1. Create/sign in to your **Postman** account;
+2. **Import** the collection file: [`postman_collection.json`];
+3. In Postman, verify the collection variables so that you know everything is set up correctly:
+   - `baseUrl` → `http://localhost:8080`
+   - `resource` → `people`
+4. Run the requests in order (the collection includes a test that remembers `personId` after create) 
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Frontend Setup
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+The React frontend provides a user-friendly interface for managing people and devices.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Prerequisites
+- **Node.js 16+** and **npm**
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+### Installation and Running
+```bash
+cd frontend
+npm install
+npm start
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+The frontend will start on: **http://localhost:3000**
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Features
+- **Authentication**: Login with JWT tokens
+- **People Management**: Create, read, update, delete people
+- **Device Management**: Create, read, update, delete devices
+- **User Assignment**: Assign devices to users
+- **Responsive Design**: Works on desktop and mobile
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Frontend Structure
+```
+frontend/
+├── public/
+│   └── index.html
+├── src/
+│   ├── components/
+│   │   ├── Layout.js          # Main layout with navigation
+│   │   ├── Login.js           # Authentication form
+│   │   ├── People.js          # People management
+│   │   ├── Devices.js         # Device management
+│   │   └── ProtectedRoute.js  # Auth guard
+│   ├── context/
+│   │   └── AuthContext.js     # Authentication state
+│   ├── services/
+│   │   └── api.js             # API communication
+│   ├── App.js                 # Main app component
+│   └── index.js               # Entry point
+└── package.json
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Default Credentials
+For testing, you can use the basic auth credentials configured in Traefik:
+- Username: `user`
+- Password: `test`
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Where it runs
+By default the app binds to `PORT` (default **8080**) on your machine
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+---
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Run with Docker + Traefik (URLs)
+If you started the stack with:
 
-## License
-For open source projects, say how it is licensed.
+- docker compose up -d
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Then open these in your browser (address bar), a.k.a. "what URL to write":
+
+- Through Traefik (with Basic Auth):
+  - People API: http://localhost/api/people
+  - Devices API: http://localhost/api/devices
+  - Credentials (Basic Auth): username "user", password "test"
+- Traefik dashboard: http://localhost:8080
+- Direct access to services (bypassing Traefik):
+  - People service: http://localhost:8081/people
+  - Devices service: http://localhost:8082/devices
+
+Notes:
+- Traefik strips the "/api" prefix before forwarding to the services, so /api/people reaches /people on the people service, and /api/devices reaches /devices on the devices service.
+- If http://localhost/api/people asks for a username/password, use user/test.
+
+## Full Stack Development Workflow
+
+1. **Start the backend services**:
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Start the frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
+
+3. **Access the application**:
+   - Frontend: http://localhost:3000
+   - Backend APIs: http://localhost/api/people, http://localhost/api/devices
+   - Traefik Dashboard: http://localhost:8080
+
+## Full Stack Docker Deployment
+
+The entire application stack can be run with Docker Compose, including the React frontend.
+
+### Prerequisites
+- **Docker** and **Docker Compose**
+
+### Quick Start
+```bash
+# Build and start all services
+docker compose up -d
+
+# Check service status
+docker compose ps
+
+# View logs
+docker compose logs -f frontend
+```
+
+### Services Overview
+When running with Docker Compose:
+
+| Service | Container | Port | Description |
+|---------|-----------|------|-------------|
+| Frontend | `frontend` | 80 | React SPA served by Nginx |
+| Traefik | `traefik` | 80, 8080 | Reverse proxy and load balancer |
+| People API | `spring-demo1` | 8080 | People management service |
+| Device API | `spring-demo2` | 8080 | Device management service |
+| Auth API | `auth-service` | 8080 | Authentication service |
+| PostgreSQL | `postgres-demo1` | 5432 | People database |
+| PostgreSQL | `postgres-demo2` | 5432 | Device database |
+| PostgreSQL | `postgres-auth` | 5432 | Auth database |
+
+### Access URLs
+- **Frontend Application**: http://localhost
+- **Traefik Dashboard**: http://localhost:8080
+- **API Endpoints**:
+  - People: http://localhost/api/people
+  - Devices: http://localhost/api/devices  
+  - Auth: http://localhost/api/auth
+
+### Development Workflow
+
+#### Option 1: Full Docker Stack
+```bash
+# Start everything
+docker compose up -d
+
+# Rebuild frontend after changes
+docker compose build frontend
+docker compose up -d frontend
+
+# View logs
+docker compose logs -f frontend
+```
+
+#### Option 2: Frontend Development Mode
+```bash
+# Start backend services only
+docker compose up -d postgres-demo1 postgres-demo2 postgres-auth spring-demo1 spring-demo2 auth-service traefik
+
+# Run frontend in development mode
+cd frontend
+npm install
+npm start
+# Frontend will be available at http://localhost:3000
+```
+
+### Frontend Docker Details
+
+The frontend uses a multi-stage build:
+1. **Build stage**: Node.js to build the React app
+2. **Production stage**: Nginx to serve static files
+
+**Key features**:
+- Optimized production build
+- Nginx configuration for SPA routing
+- Environment variable support
+- Security headers
+- Static asset caching
+- Gzip compression
+
+### Troubleshooting
+
+#### Frontend not loading
+```bash
+# Check frontend container
+docker compose logs frontend
+
+# Rebuild frontend
+docker compose build --no-cache frontend
+docker compose up -d frontend
+```
+
+#### API calls failing
+```bash
+# Check backend services
+docker compose logs spring-demo1
+docker compose logs spring-demo2
+docker compose logs auth-service
+
+# Check Traefik routing
+docker compose logs traefik
+```
+
+#### Database connection issues
+```bash
+# Check database containers
+docker compose logs postgres-demo1
+docker compose logs postgres-demo2
+docker compose logs postgres-auth
+
+# Reset databases
+docker compose down -v
+docker compose up -d
+```
+
+### Environment Variables
+
+Frontend environment variables can be set in `/frontend/.env`:
+```env
+REACT_APP_API_URL=http://localhost
+GENERATE_SOURCEMAP=false
+```

@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # Postgres for microservice 1
+  db1:
+    image: postgres:16
+    container_name: db1
+    restart: always
+    environment:
+      POSTGRES_USER: iulia
+      POSTGRES_PASSWORD: iulia
+      POSTGRES_DB: testdb1
+    ports:
+      - "5435:5432"
+    volumes:
+      - db1-data:/var/lib/postgresql/data
+    networks:
+      - proxy-network
+
+  # Postgres for microservice 2
+  db2:
+    image: postgres:16
+    container_name: db2
+    restart: always
+    environment:
+      POSTGRES_USER: iulia
+      POSTGRES_PASSWORD: iulia
+      POSTGRES_DB: testdb2
+    ports:
+      - "5434:5432"
+    volumes:
+      - db2-data:/var/lib/postgresql/data
+    networks:
+      - proxy-network
+
+  # Postgres for AuthService
+  db-auth:
+    image: postgres:16
+    container_name: db-auth
+    restart: always
+    environment:
+      POSTGRES_USER: iulia
+      POSTGRES_PASSWORD: iulia
+      POSTGRES_DB: authdb
+    volumes:
+      - db-auth-data:/var/lib/postgresql/data
+    networks:
+      - proxy-network
+
+  # Spring Boot microservice 1
+  spring-demo1:
+    build:
+      context: ./demo
+      dockerfile: Dockerfile
+    image: backend-image1
+    container_name: spring-demo1
+    ports:
+      - "8081:8080"  # Expose for Swagger UI access
+    environment:
+      - DB_IP=db1
+      - DB_PORT=5432
+      - DB_DBNAME=testdb1
+      - DB_USER=iulia
+      - DB_PASSWORD=iulia
+      - PORT=8080
+      - DEVICE_SERVICE_BASE_URL=http://spring-demo2:8080
+      - AUTH_SERVICE_BASE_URL=http://auth-service:8080
+      - JWT_SECRET=${JWT_SECRET:-iuliaiuliaiuliaiuliaiuliaiulia01112003}
+    depends_on:
+      - db1
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.people.rule=Host(`localhost`) && PathPrefix(`/api/user`)"
+      - "traefik.http.routers.people.entrypoints=web"
+      - "traefik.http.services.people.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.strip-people.stripprefix.prefixes=/api"
+      - "traefik.http.routers.people.middlewares=strip-people"
+      - "traefik.http.routers.people.priority=100"
+    networks:
+      - proxy-network
+
+  # Spring Boot microservice 2
+  spring-demo2:
+    build:
+      context: ./microserviceDevice
+      dockerfile: Dockerfile
+    image: backend-image2
+    container_name: spring-demo2
+    ports:
+      - "8082:8080"  # Expose for Swagger UI access
+    environment:
+      - DB_IP=db2
+      - DB_PORT=5432
+      - DB_DBNAME=testdb2
+      - DB_USER=iulia
+      - DB_PASSWORD=iulia
+      - PORT=8080
+      - USER_SERVICE_BASE_URL=http://spring-demo1:8080
+      - JWT_SECRET=${JWT_SECRET:-iuliaiuliaiuliaiuliaiuliaiulia01112003}
+    depends_on:
+      - db2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.devices.rule=Host(`localhost`) && PathPrefix(`/api/device`)"
+      - "traefik.http.routers.devices.entrypoints=web"
+      - "traefik.http.services.devices.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.strip-device.stripprefix.prefixes=/api"
+      - "traefik.http.routers.devices.middlewares=strip-device"
+      - "traefik.http.routers.devices.priority=10"
+    networks:
+      - proxy-network
+
+  # AuthService
+  auth-service:
+    build:
+      context: ./AuthService
+      dockerfile: Dockerfile
+    image: backend-image3
+    container_name: auth-service
+    ports:
+      - "8083:8080"  # Expose for Swagger UI access
+    environment:
+      - DB_IP=db-auth
+      - DB_PORT=5432
+      - DB_DBNAME=authdb
+      - DB_USER=iulia
+      - DB_PASSWORD=iulia
+      - PORT=8080
+      - JWT_SECRET=${JWT_SECRET:-iuliaiuliaiuliaiuliaiuliaiulia01112003}
+    depends_on:
+      - db-auth
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`localhost`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+      - "traefik.http.routers.auth.priority=10"
+    networks:
+      - proxy-network
+
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - ./logs:/var/log/traefik
+    networks:
+      - proxy-network
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost
+    image: frontend:latest
+    container_name: frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    networks:
+      - proxy-network
+    depends_on:
+      - spring-demo1
+      - spring-demo2
+      - auth-service
+
+volumes:
+  db1-data:
+  db2-data:
+  db-auth-data:
+  postgres_demo1_data:
+  postgres_demo2_data:
+  postgres_auth_data:
+
+networks:
+  proxy-network:
+    driver: bridge
+
+
