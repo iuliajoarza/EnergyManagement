@@ -1,0 +1,11 @@
+com/example/monitoring/service/DeviceDataConsumerService.class
+com/example/monitoring/config/RabbitMQConfig.class
+com/example/monitoring/controller/ConsumptionController.class
+com/example/monitoring/MonitoringApplication.class
+com/example/monitoring/controller/EnergyConsumptionController.class
+com/example/monitoring/service/SynchronizationConsumerService.class
+com/example/monitoring/repository/HourlyEnergyConsumptionRepository.class
+com/example/monitoring/entity/DeviceData.class
+com/example/monitoring/repository/DeviceDataRepository.class
+com/example/monitoring/config/SynchronizationQueueConfig.class
+com/example/monitoring/entity/HourlyEnergyConsumption.class

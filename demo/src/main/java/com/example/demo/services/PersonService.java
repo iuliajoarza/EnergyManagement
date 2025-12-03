@@ -10,11 +10,7 @@ import com.example.demo.repositories.PersonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,16 +20,13 @@ import java.util.stream.Collectors;
 public class PersonService {
     private static final Logger LOGGER = LoggerFactory.getLogger(PersonService.class);
     private final PersonRepository personRepository;
-    private final RestTemplate restTemplate;
-    private final String deviceServiceBaseUrl;
+    private final SyncPublisherService syncPublisherService;
 
     @Autowired
     public PersonService(PersonRepository personRepository,
-                         RestTemplate restTemplate,
-                         @Value("${device.service.base-url}") String deviceServiceBaseUrl) {
+                         SyncPublisherService syncPublisherService) {
         this.personRepository = personRepository;
-        this.restTemplate = restTemplate;
-        this.deviceServiceBaseUrl = deviceServiceBaseUrl;
+        this.syncPublisherService = syncPublisherService;
     }
 
     public List<PersonDTO> findPersons() {
@@ -65,6 +58,10 @@ public class PersonService {
         Person person = PersonBuilder.toEntity(personDTO);
         person = personRepository.save(person);
         LOGGER.debug("Person with id {} was inserted in db", person.getId());
+        
+        // Publish user sync event
+        syncPublisherService.publishUserSync(person.getId().toString(), person.getName());
+        
         return person.getId();
     }
 
@@ -74,17 +71,22 @@ public class PersonService {
             LOGGER.error("Person with id {} was not found in db", id);
             throw new ResourceNotFoundException(Person.class.getSimpleName() + " with id: " + id);
         }
-        // Best-effort cascade delete devices via HTTP to Device service
+        // Publish command to delete devices via RabbitMQ
         try {
-            String url = deviceServiceBaseUrl + "/device/user/" + id;
-            restTemplate.delete(url);
-            LOGGER.debug("Requested deletion of all devices for user {} via {}", id, url);
-        } catch (RestClientException ex) {
-            LOGGER.warn("Failed to delete devices for user {} in device service: {}", id, ex.getMessage());
+            syncPublisherService.publishDeleteUserDevices(id.toString());
+            LOGGER.debug("Published RabbitMQ command to delete all devices for user {}", id);
+        } catch (Exception ex) {
+            LOGGER.warn("Failed to publish delete devices command for user {}: {}", id, ex.getMessage());
             // Do not prevent user deletion; proceed regardless
         }
         personRepository.deleteById(id);
         LOGGER.debug("Person with id {} was deleted from db", id);
+        try {
+            syncPublisherService.publishUserDeleted(id.toString());
+            LOGGER.debug("Published user_deleted sync event for user {}", id);
+        } catch (Exception ex) {
+            LOGGER.warn("Failed to publish user_deleted event for user {}: {}", id, ex.getMessage());
+        }
     }
 
     public void update(UUID id, PersonDetailsDTO dto) {
@@ -99,6 +101,12 @@ public class PersonService {
         p.setAge(dto.getAge());
         personRepository.save(p);
         LOGGER.debug("Person with id {} was updated", id);
+        try {
+            syncPublisherService.publishUserSync(id.toString(), p.getName());
+            LOGGER.debug("Published user sync event after update for {}", id);
+        } catch (Exception ex) {
+            LOGGER.warn("Failed to publish user sync event after update for {}: {}", id, ex.getMessage());
+        }
     }
 
 }

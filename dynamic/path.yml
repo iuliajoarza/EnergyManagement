@@ -16,6 +16,14 @@ http:
       stripPrefix:
         prefixes:
           - "/api"
+    strip-monitoring-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    strip-usercache-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
 
   services:
     people-service:
@@ -30,6 +38,18 @@ http:
       loadBalancer:
         servers:
           - url: "http://auth-service:8080"
+    monitoring-service:
+      loadBalancer:
+        servers:
+          - url: "http://monitoring:8080"
+    simulator-service:
+      loadBalancer:
+        servers:
+          - url: "http://simulator:80"
+    rabbitmq-service:
+      loadBalancer:
+        servers:
+          - url: "http://rabbitmq:15672"
   
 
   routers:
@@ -54,11 +74,39 @@ http:
         - "strip-devices-prefix@file"
       priority: 10
 
+    usercache-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/usercache`)"
+      entryPoints:
+        - web
+      service: devices-service
+      middlewares:
+        - "strip-usercache-prefix@file"
+      priority: 15
+
     auth-api:
       rule: "Host(`localhost`) && PathPrefix(`/api/auth`)"
       entryPoints:
         - web
       service: auth-service
+    monitoring-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/monitoring`)"
+      entryPoints:
+        - web
+      service: monitoring-service
+      middlewares:
+        - "strip-monitoring-prefix@file"
+      priority: 10
+    simulator-api:
+      rule: "Host(`localhost`) && PathPrefix(`/api/simulator`)"
+      entryPoints:
+        - web
+      service: simulator-service
+      priority: 5
+    rabbitmq-api:
+      rule: "Host(`localhost`) && PathPrefix(`/rabbitmq`)"
+      entryPoints:
+        - web
+      service: rabbitmq-service
+      priority: 10
       middlewares:
         - "strip-auth-prefix@file"
-      priority: 10

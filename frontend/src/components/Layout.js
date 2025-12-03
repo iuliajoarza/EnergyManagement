@@ -81,6 +81,7 @@ const Layout = () => {
           <div style={styles.navLinks}>
             {isAdmin && <Link to="/people" style={styles.navLink}>People</Link>}
             <Link to="/devices" style={styles.navLink}>Devices</Link>
+            <Link to="/energy" style={styles.navLink}>Energy Consumption</Link>
           </div>
           <div style={styles.userInfo}>
             <span>Welcome, {user?.username || 'User'}</span>

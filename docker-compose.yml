@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - proxy-network
+
   # Postgres for microservice 1
   db1:
     image: postgres:16
@@ -47,6 +59,40 @@ services:
     networks:
       - proxy-network
 
+  # Python Simulator Service - DISABLED, use run_simulator.sh instead
+  # simulator:
+  #   build:
+  #     context: ./simulation/simulator
+  #     dockerfile: Dockerfile
+  #   container_name: simulator
+  #   depends_on:
+  #     - rabbitmq
+  #   networks:
+  #     - proxy-network
+  #   # Optional env SIM_DEVICE_ID can be set if you use compose directly
+  #   # environment:
+  #   #   - SIM_DEVICE_ID=CHANGE_ME_DEVICE_ID
+
+  # Monitoring Microservice
+  monitoring:
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
+    container_name: monitoring
+    depends_on:
+      - rabbitmq
+      - monitoring-db
+    ports:
+      - "8090:8080"
+    environment:
+      - DB_IP=monitoring-db
+      - DB_PORT=5432
+      - DB_USER=iulia
+      - DB_PASSWORD=iulia
+      - DB_DBNAME=monitoring_db
+    networks:
+      - proxy-network
+
   # Spring Boot microservice 1
   spring-demo1:
     build:
@@ -55,7 +101,7 @@ services:
     image: backend-image1
     container_name: spring-demo1
     ports:
-      - "8081:8080"  # Expose for Swagger UI access
+      - "8081:8080"
     environment:
       - DB_IP=db1
       - DB_PORT=5432
@@ -63,11 +109,12 @@ services:
       - DB_USER=iulia
       - DB_PASSWORD=iulia
       - PORT=8080
-      - DEVICE_SERVICE_BASE_URL=http://spring-demo2:8080
       - AUTH_SERVICE_BASE_URL=http://auth-service:8080
       - JWT_SECRET=${JWT_SECRET:-iuliaiuliaiuliaiuliaiuliaiulia01112003}
+      - RABBITMQ_HOST=rabbitmq
     depends_on:
       - db1
+      - rabbitmq
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.people.rule=Host(`localhost`) && PathPrefix(`/api/user`)"
@@ -76,6 +123,22 @@ services:
       - "traefik.http.middlewares.strip-people.stripprefix.prefixes=/api"
       - "traefik.http.routers.people.middlewares=strip-people"
       - "traefik.http.routers.people.priority=100"
+    networks:
+      - proxy-network
+
+# PostgreSQL for Monitoring Microservice
+  monitoring-db:
+    image: postgres:16
+    container_name: monitoring-db
+    restart: always
+    environment:
+      POSTGRES_USER: iulia
+      POSTGRES_PASSWORD: iulia
+      POSTGRES_DB: monitoring_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - monitoring-db-data:/var/lib/postgresql/data
     networks:
       - proxy-network
 
@@ -97,8 +160,10 @@ services:
       - PORT=8080
       - USER_SERVICE_BASE_URL=http://spring-demo1:8080
       - JWT_SECRET=${JWT_SECRET:-iuliaiuliaiuliaiuliaiuliaiulia01112003}
+      - RABBITMQ_HOST=rabbitmq
     depends_on:
       - db2
+      - rabbitmq
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.devices.rule=Host(`localhost`) && PathPrefix(`/api/device`)"
@@ -140,7 +205,7 @@ services:
 
   # Traefik reverse proxy
   traefik:
-    image: traefik:v3.0
+    image: traefik:v2.11
     container_name: traefik
     command:
       - "--configFile=/etc/traefik/traefik.yml"
@@ -186,6 +251,7 @@ volumes:
   postgres_demo1_data:
   postgres_demo2_data:
   postgres_auth_data:
+  monitoring-db-data:
 
 networks:
   proxy-network:

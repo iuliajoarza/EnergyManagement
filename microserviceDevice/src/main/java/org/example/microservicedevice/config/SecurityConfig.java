@@ -24,6 +24,8 @@ public class SecurityConfig {
                     "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                     "/api/device/v3/api-docs/**", "/api/device/swagger-ui/**", "/api/device/swagger-ui.html"
                 ).permitAll()
+                // UserCache endpoints - allow authenticated access
+                .requestMatchers("/usercache/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

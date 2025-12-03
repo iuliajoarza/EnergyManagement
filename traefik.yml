@@ -10,7 +10,7 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: "proxy-network"
+    network: "ds2025_30242_joarza_iulia_maria_proxy-network"
   file:
     directory: "/etc/traefik/dynamic"
     watch: true

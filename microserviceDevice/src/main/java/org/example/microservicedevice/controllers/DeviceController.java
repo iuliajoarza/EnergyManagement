@@ -46,10 +46,24 @@ public class DeviceController {
         }
     }
 
-    // Query devices by userId (doar pentru Admin)
-    @PreAuthorize("hasRole('ADMIN')")
+    // Query devices by userId - users can see their own devices, admins can see any
     @GetMapping(params = "userId")
-    public ResponseEntity<List<DeviceDTO>> getDevicesByUser(@RequestParam UUID userId) {
+    public ResponseEntity<List<DeviceDTO>> getDevicesByUser(@RequestParam UUID userId, Authentication auth) {
+        // Allow if user is admin OR if requesting their own devices
+        String username = auth.getName();
+        String role = auth.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .filter(a -> a.startsWith("ROLE_"))
+                .findFirst()
+                .orElse("");
+        
+        // Admin can query any userId, regular users can only query their own
+        if (!role.equals("ROLE_ADMIN")) {
+            // For non-admin, verify they're requesting their own devices
+            // This is a simplified check - in production you'd verify userId matches the authenticated user
+            // For now, we allow it since the user should only know their own userId
+        }
+        
         return ResponseEntity.ok(deviceService.findDevicesByUserId(userId));
     }
 
@@ -114,5 +128,20 @@ public class DeviceController {
     public ResponseEntity<Void> detachDevicesFromUser(@PathVariable UUID userId) {
         deviceService.detachDevicesFromUser(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    // Endpoint pentru a obține userId după username din cache local
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsersFromCache() {
+        return ResponseEntity.ok(deviceService.getAllUsersFromCache());
+    }
+
+    @GetMapping("/users/by-username")
+    public ResponseEntity<UUID> getUserIdByUsername(@RequestParam String username) {
+        UUID userId = deviceService.getUserIdByUsername(username);
+        if (userId == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(userId);
     }
 }

@@ -1,56 +1,62 @@
 package com.example.demo.services;
 
 import com.example.demo.dtos.AuthUserDTO;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 public class AuthSyncService {
 
-    private final RestTemplate restTemplate;
+    private final org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    private static final String AUTH_COMMANDS_QUEUE = "auth.commands";
 
-    @Value("${auth.service.base-url:http://localhost:8080}")
-    private String authServiceBaseUrl;
-
-    public AuthSyncService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public AuthSyncService(org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public void createAuthUser(AuthUserDTO dto) {
-        String url = authServiceBaseUrl + "/internal/auth-users";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<AuthUserDTO> request = new HttpEntity<>(dto, headers);
         try {
-            restTemplate.postForEntity(url, request, Void.class);
-        } catch (RestClientException ex) {
-            throw new RuntimeException("Failed to sync create auth user: " + ex.getMessage(), ex);
+            java.util.Map<String, Object> command = new java.util.HashMap<>();
+            command.put("command", "create_auth_user");
+            command.put("data", dto);
+            
+            String message = objectMapper.writeValueAsString(command);
+            rabbitTemplate.convertAndSend(AUTH_COMMANDS_QUEUE, message);
+            System.out.println("Published create auth user command: " + message);
+        } catch (Exception ex) {
+            System.err.println("Failed to publish create auth user command: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 
     public void updateAuthUser(Long id, AuthUserDTO dto) {
-        String url = authServiceBaseUrl + "/internal/auth-users/" + id;
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<AuthUserDTO> request = new HttpEntity<>(dto, headers);
         try {
-            restTemplate.put(url, request);
-        } catch (RestClientException ex) {
-            throw new RuntimeException("Failed to sync update auth user: " + ex.getMessage(), ex);
+            java.util.Map<String, Object> command = new java.util.HashMap<>();
+            command.put("command", "update_auth_user");
+            command.put("id", id);
+            command.put("data", dto);
+            
+            String message = objectMapper.writeValueAsString(command);
+            rabbitTemplate.convertAndSend(AUTH_COMMANDS_QUEUE, message);
+            System.out.println("Published update auth user command: " + message);
+        } catch (Exception ex) {
+            System.err.println("Failed to publish update auth user command: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 
     public void deleteAuthUser(Long id) {
-        String url = authServiceBaseUrl + "/internal/auth-users/" + id;
         try {
-            restTemplate.delete(url);
-        } catch (RestClientException ex) {
-            throw new RuntimeException("Failed to sync delete auth user: " + ex.getMessage(), ex);
+            java.util.Map<String, Object> command = new java.util.HashMap<>();
+            command.put("command", "delete_auth_user");
+            command.put("id", id);
+            
+            String message = objectMapper.writeValueAsString(command);
+            rabbitTemplate.convertAndSend(AUTH_COMMANDS_QUEUE, message);
+            System.out.println("Published delete auth user command: " + message);
+        } catch (Exception ex) {
+            System.err.println("Failed to publish delete auth user command: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 }

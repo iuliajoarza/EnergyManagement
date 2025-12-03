@@ -12,15 +12,7 @@ import org.example.microservicedevice.repositories.DeviceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -32,16 +24,16 @@ import java.util.stream.Collectors;
 public class DeviceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DeviceService.class);
     private final DeviceRepository deviceRepository;
-    private final RestTemplate restTemplate;
-    private final String userServiceBaseUrl;
+    private final SyncPublisherService syncPublisherService;
+    private final UserCacheService userCacheService;
 
     @Autowired
     public DeviceService(DeviceRepository deviceRepository,
-                         RestTemplate restTemplate,
-                         @Value("${user.service.base-url}") String userServiceBaseUrl) {
+                         SyncPublisherService syncPublisherService,
+                         UserCacheService userCacheService) {
         this.deviceRepository = deviceRepository;
-        this.restTemplate = restTemplate;
-        this.userServiceBaseUrl = userServiceBaseUrl;
+        this.syncPublisherService = syncPublisherService;
+        this.userCacheService = userCacheService;
     }
 
     public List<DeviceDTO> findDevices() {
@@ -73,27 +65,12 @@ public class DeviceService {
             LOGGER.debug("Device has no assigned user (userId is null)");
             return;
         }
-        // Validate user existence via People Service
-        String url = userServiceBaseUrl + "/user/" + userId;
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader != null) {
-                headers.set("Authorization", authHeader);
-            }
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-            restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
-            LOGGER.debug("Validated existence of userId {} via People Service", userId);
-        } catch (HttpClientErrorException.NotFound e) {
-            LOGGER.error("User with id {} does not exist in People Service", userId);
+        // Validate user existence via user cache
+        if (!userCacheService.userExists(userId)) {
+            LOGGER.error("User with id {} does not exist in user cache", userId);
             throw new BadRequestException("User with id: " + userId + " does not exist");
-        } catch (HttpClientErrorException e) {
-            LOGGER.error("Error validating userId {}: {}", userId, e.getStatusCode());
-            throw new BadRequestException("Failed to validate user existence: " + e.getStatusCode());
-        } catch (ResourceAccessException e) {
-            LOGGER.error("People Service unavailable when validating userId {}", userId);
-            throw new BadRequestException("People Service unavailable");
         }
+        LOGGER.debug("Validated existence of userId {} via user cache", userId);
     }
 
     public UUID insert(@Valid DeviceDetailsDTO deviceDTO, HttpServletRequest request) {
@@ -101,6 +78,10 @@ public class DeviceService {
         Device device = DeviceBuilder.toEntity(deviceDTO);
         device = deviceRepository.save(device);
         LOGGER.debug("Device with id {} was inserted in db", device.getId());
+        
+        // Publish device sync event
+        syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName());
+        
         return device.getId();
     }
 
@@ -125,11 +106,17 @@ public class DeviceService {
             throw new ResourceNotFoundException("Device with id: " + id + " not found");
         }
         deviceRepository.deleteById(id);
+        syncPublisherService.publishDeviceDeleted(id.toString());
         LOGGER.debug("Device with id {} was deleted from db", id);
     }
 
     public void deleteByUserId(UUID userId) {
+        List<Device> devices = deviceRepository.findByUserId(userId);
         deviceRepository.deleteByUserId(userId);
+        // Publish deletion event for each device
+        for (Device device : devices) {
+            syncPublisherService.publishDeviceDeleted(device.getId().toString());
+        }
         LOGGER.debug("All devices for user {} were deleted", userId);
     }
 
@@ -151,21 +138,12 @@ public class DeviceService {
     }
 
     private UUID getUserIdFromPeopleService(String username) {
-        try {
-            String url = userServiceBaseUrl + "/user?username=" + username;
-            // Folosim Map pentru a parsa JSON-ul simplu
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
-            
-            if (response != null && response.containsKey("id")) {
-                String userIdStr = (String) response.get("id");
-                return UUID.fromString(userIdStr);
-            }
-            throw new ResourceNotFoundException("User not found: " + username);
-        } catch (Exception e) {
-            LOGGER.error("Failed to get userId from People Service for username: {}", username, e);
+        UUID userId = userCacheService.getUserIdByUsername(username);
+        if (userId == null) {
+            LOGGER.error("User with username {} not found in user cache", username);
             throw new ResourceNotFoundException("User not found: " + username);
         }
+        return userId;
     }
 
     public boolean isDeviceOwnedByUser(UUID deviceId, String username) {
@@ -183,5 +161,15 @@ public class DeviceService {
             LOGGER.error("Error checking device ownership for device {} and user {}", deviceId, username, e);
             return false;
         }
+    }
+
+    public java.util.List<org.example.microservicedevice.dtos.UserCacheDTO> getAllUsersFromCache() {
+        return userCacheService.getAllUsers().stream()
+            .map(u -> new org.example.microservicedevice.dtos.UserCacheDTO(u.getUserId(), u.getUsername()))
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    public UUID getUserIdByUsername(String username) {
+        return userCacheService.getUserIdByUsername(username);
     }
 }

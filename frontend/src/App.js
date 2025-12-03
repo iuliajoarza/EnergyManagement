@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import People from './components/People';
 import Devices from './components/Devices';
+import EnergyConsumption from './components/EnergyConsumption';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -31,6 +32,7 @@ function App() {
               </AdminRoute>
             } />
             <Route path="devices" element={<Devices />} />
+            <Route path="energy" element={<EnergyConsumption />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,0 +1,75 @@
+version: '3.8'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - simulation-net
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: monitoring_db
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: monitor
+    ports:
+      - "5432:5432"
+    networks:
+      - simulation-net
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  simulator:
+    build: ./simulator
+    container_name: simulator
+    depends_on:
+      - rabbitmq
+    environment:
+      - DEVICE_IDS=175e8367-1c14-4be1-888b-69168c9df2cc,c9da40ae-8e22-46fe-8756-d70e2bf563c1,6c900c82-99c4-410c-80e2-08a7779e7af3
+    networks:
+      - simulation-net
+
+  monitoring:
+    build: ../monitoring
+    container_name: monitoring
+    depends_on:
+      - rabbitmq
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - simulation-net
+
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.dashboard.address=:8080
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - simulation-net
+
+
+networks:
+  simulation-net:
+    driver: bridge
+
+volumes:
+  pgdata:

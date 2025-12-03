@@ -1,5 +1,19 @@
 import axios from 'axios';
 
+// Helper to decode JWT
+export const decodeJWT = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
 const baseURL = (process.env.REACT_APP_API_URL || 'http://localhost').replace(/\/+$/, '');
 
 const apiClient = axios.create({
@@ -69,6 +83,7 @@ export const authAPI = {
 export const peopleAPI = {
   getAll: () => apiClient.get('/api/user'),
   getById: (id) => apiClient.get(`/api/user/${id}`),
+  getByUsername: (username) => apiClient.get('/api/user', { params: { username } }),
   create: (user) => apiClient.post('/api/user', user),
   update: (id, user) => apiClient.put(`/api/user/${id}`, user),
   delete: (id) => apiClient.delete(`/api/user/${id}`),
@@ -77,10 +92,19 @@ export const peopleAPI = {
 export const devicesAPI = {
   getAll: () => apiClient.get('/api/device'),
   getById: (id) => apiClient.get(`/api/device/${id}`),
+  getByUserId: (userId) => apiClient.get('/api/device', { params: { userId } }),
   create: (device) => apiClient.post('/api/device', device),
   update: (id, device) => apiClient.put(`/api/device/${id}`, device),
   delete: (id) => apiClient.delete(`/api/device/${id}`),
   deleteByUser: (userId) => apiClient.delete(`/api/device/user/${userId}`),
+  getAllUsers: () => apiClient.get('/api/device/users'),
+  getUserIdByUsername: (username) => apiClient.get('/api/device/users/by-username', { params: { username } })
+};
+
+// API pentru user cache din microserviciul device
+export const userCacheAPI = {
+  getAll: () => apiClient.get('/api/device/users'),
+  getByUsername: (username) => apiClient.get('/api/device/users/by-username', { params: { username } })
 };
 
 export default apiClient;
