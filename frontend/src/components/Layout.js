@@ -1,8 +1,10 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Chat from './Chat';
+import NotificationCenter from './NotificationCenter';
 
-// Decode JWT token to extract role
+// Decode JWT token to extract role and userId
 const decodeToken = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -20,10 +22,12 @@ const decodeToken = (token) => {
 const Layout = () => {
   const { logout, user } = useAuth(); // added user to display username if needed
 
-  // Decode token to get role
+  // Decode token to get role and userId
   const token = user?.token || localStorage.getItem('token');
   const decoded = token ? decodeToken(token) : null;
   const isAdmin = decoded?.role === 'ROLE_ADMIN';
+  // Use JWT subject (sub) as username identity, fallback to context username
+  const userId = user?.username || decoded?.sub || decoded?.userId || decoded?.username;
 
   const styles = {
     container: {
@@ -76,10 +80,12 @@ const Layout = () => {
 
   return (
     <div style={styles.container}>
+      <NotificationCenter />
       <header style={styles.header}>
         <nav style={styles.nav}>
           <div style={styles.navLinks}>
             {isAdmin && <Link to="/people" style={styles.navLink}>People</Link>}
+            {isAdmin && <Link to="/admin-chat" style={styles.navLink}>Admin Chat</Link>}
             <Link to="/devices" style={styles.navLink}>Devices</Link>
             <Link to="/energy" style={styles.navLink}>Energy Consumption</Link>
           </div>
@@ -92,6 +98,7 @@ const Layout = () => {
       <main style={styles.main}>
         <Outlet />
       </main>
+      {userId && <Chat userId={userId} />}
     </div>
   );
 };

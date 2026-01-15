@@ -90,6 +90,47 @@ services:
       - DB_USER=iulia
       - DB_PASSWORD=iulia
       - DB_DBNAME=monitoring_db
+      - RABBITMQ_HOST=rabbitmq
+    networks:
+      - proxy-network
+
+  # WebSocket Microservice for real-time notifications
+  websocket-service:
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    container_name: websocket-service
+    depends_on:
+      - rabbitmq
+    ports:
+      - "8085:8085"
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.websocket.rule=Host(`localhost`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.websocket.entrypoints=web"
+      - "traefik.http.services.websocket.loadbalancer.server.port=8085"
+      - "traefik.http.routers.websocket.priority=50"
+    networks:
+      - proxy-network
+
+  # Customer Support (Chat) Microservice
+  chat-service:
+    build:
+      context: ./chat
+      dockerfile: Dockerfile
+    container_name: chat-service
+    depends_on:
+      - rabbitmq
+    ports:
+      - "8086:8086"
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - AI_ENABLED=true
+      - HUGGINGFACE_API_KEY=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
+      - HUGGINGFACE_MODEL=google/flan-t5-small
+      - HUGGINGFACE_INSECURE=true
     networks:
       - proxy-network
 
@@ -229,6 +270,8 @@ services:
         REACT_APP_API_URL: http://localhost
     image: frontend:latest
     container_name: frontend
+    ports:
+      - "3000:3000"
     environment:
       - REACT_APP_API_URL=http://localhost
     labels:
@@ -236,7 +279,7 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`localhost`)"
       - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.routers.frontend.priority=1"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     networks:
       - proxy-network
     depends_on:

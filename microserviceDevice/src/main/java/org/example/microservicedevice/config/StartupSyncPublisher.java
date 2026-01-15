@@ -27,7 +27,7 @@ public class StartupSyncPublisher {
         LOGGER.info("Publishing sync events for all existing devices...");
         List<Device> devices = deviceRepository.findAll();
         for (Device device : devices) {
-            syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName());
+            syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName(), device.getMaxConsumption());
         }
         LOGGER.info("Published sync events for {} devices", devices.size());
     }

@@ -1,0 +1,8 @@
+com/example/chat/service/AdminChatService.class
+com/example/chat/service/RuleBasedChatbotService$ChatRule.class
+com/example/chat/config/RabbitMQConfig.class
+com/example/chat/service/ChatService.class
+com/example/chat/service/AIService.class
+com/example/chat/CustomerSupportApplication.class
+com/example/chat/service/RuleBasedChatbotService.class
+com/example/chat/model/ChatMessage.class

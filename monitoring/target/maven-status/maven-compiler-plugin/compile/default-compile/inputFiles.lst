@@ -1,11 +1,14 @@
-/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/controller/EnergyConsumptionController.java
-/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/config/SynchronizationQueueConfig.java
-/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/MonitoringApplication.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/service/SynchronizationConsumerService.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/config/RabbitMQConfig.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/repository/HourlyEnergyConsumptionRepository.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/entity/DeviceInfo.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/controller/EnergyConsumptionController.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/config/SynchronizationQueueConfig.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/MonitoringApplication.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/service/NotificationService.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/entity/DeviceData.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/service/DeviceDataConsumerService.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/repository/DeviceDataRepository.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/repository/DeviceInfoRepository.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/entity/HourlyEnergyConsumption.java
 /home/iulia/ds2025_30242_joarza_iulia_maria/monitoring/src/main/java/com/example/monitoring/controller/ConsumptionController.java

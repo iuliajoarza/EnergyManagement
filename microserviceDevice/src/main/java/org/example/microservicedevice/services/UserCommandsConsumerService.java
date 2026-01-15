@@ -25,8 +25,8 @@ public class UserCommandsConsumerService {
             if ("delete_user_devices".equals(command)) {
                 String userId = node.get("user_id").asText();
                 System.out.println("=== Processing delete_user_devices for user: " + userId);
-                deviceService.deleteByUserId(UUID.fromString(userId));
-                System.out.println("=== Successfully deleted devices for user: " + userId);
+                deviceService.detachDevicesFromUser(UUID.fromString(userId));
+                System.out.println("=== Successfully detached devices for user: " + userId);
             } else {
                 System.err.println("=== Unknown command: " + command);
             }

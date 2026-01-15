@@ -1,13 +1,38 @@
-# Demo — Spring Boot API with React Frontend
+# Energy Management System - Microservices Architecture
 
-A microservices project with Spring Boot REST APIs (people and device services) and a React frontend. Includes PostgreSQL databases, authentication, and Traefik routing.
+A distributed microservices project for managing energy consumption with real-time notifications, chatbot support, and WebSocket communication. Built with Spring Boot, React, RabbitMQ, and Docker.
 
-## Contents
+## 🎯 Assignment 3 Features
 
-- **Backend Services**: People Service, Device Service, Auth Service
-- **Frontend**: React SPA with authentication and CRUD operations
-- **Database**: PostgreSQL for each service
-- **Proxy**: Traefik for routing and load balancing
+### ✅ Implemented Features (5 points minimum)
+- **WebSocket Microservice**: Real-time overconsumption notifications via WebSocket/STOMP
+- **Rule-Based Chatbot**: Customer support with 14+ predefined rules for common questions
+- **Overconsumption Alerts**: Automatic detection and real-time notifications when devices exceed max consumption
+- **Chat UI**: Floating chat widget integrated in frontend with live messaging
+- **Docker Deployment**: All services containerized and orchestrated with Docker Compose
+
+### 🎁 Bonus Features
+- **AI-Driven Customer Support (1p)** - ✅ IMPLEMENTED with HuggingFace API (Mistral-7B model)
+  - Falls back to AI when no rule matches
+  - See [HUGGINGFACE_SETUP.md](HUGGINGFACE_SETUP.md) for configuration
+- Client-Admin Chat (2p) - Architecture ready, needs admin panel
+- Load Balancing Service (2p) - Can be added for monitoring replicas
+
+## 📦 Contents
+
+- **Backend Services**:
+  - People Service (User management)
+  - Device Service (Device CRUD operations)
+  - Auth Service (JWT authentication)
+  - Monitoring Service (Energy consumption tracking + alerts)
+  - **WebSocket Service** (Real-time notifications - NEW)
+  - **Customer Support Service** (Rule-based chatbot - NEW)
+  
+- **Frontend**: React SPA with WebSocket client, chat interface, and real-time notifications
+- **Message Broker**: RabbitMQ for asynchronous communication
+- **Databases**: PostgreSQL instances for each service
+- **Reverse Proxy**: Traefik for routing and load balancing
+- **Simulator**: Python-based device data generator
 
 ## Project structure
 ```
@@ -74,6 +99,115 @@ demo/
 - **Java JDK 25**
 - **PostgreSQL** server accessible from the app (can be changed to any other db from application.properties)
 - **Postman** account to import & run the test collection
+
+## 🚀 Quick Start (Assignment 3)
+
+### Prerequisites
+- **Docker** and **Docker Compose**
+- **Node.js 16+** (for frontend development)
+- **Java 17+** (for local development)
+- **PostgreSQL** (automatically handled by Docker)
+
+### Build and Run All Services
+```bash
+# Set JWT secret (important!)
+export JWT_SECRET=iuliaiuliaiuliaiuliaiuliaiulia01112003
+
+# Build and start all services
+docker-compose up --build
+
+# Or run in detached mode
+docker-compose up -d --build
+```
+
+### Access the Application
+- **Frontend**: http://localhost
+- **Traefik Dashboard**: http://localhost:8080
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **People Service**: http://localhost:8081
+- **Device Service**: http://localhost:8082
+- **Auth Service**: http://localhost:8083
+- **Monitoring Service**: http://localhost:8090
+- **WebSocket Service**: http://localhost:8085
+- **Chat Service**: http://localhost:8086
+
+### Test the Features
+
+#### 1. Login and Navigate
+```bash
+# Default credentials (if seeded)
+Username: admin
+Password: admin
+```
+
+#### 2. Add a Device with Max Consumption
+- Go to "Devices" section
+- Click "Add New Device"
+- Set **Max Consumption** (e.g., 2.5 kW)
+- Save the device
+
+#### 3. Start the Simulator
+```bash
+cd simulation
+./run_simulator.sh
+```
+The simulator will generate energy data every 5 seconds.
+
+#### 4. See Overconsumption Alerts
+- When device consumption exceeds max, you'll receive:
+  - **Real-time notification** in the chat widget
+  - **Browser notification** (if permitted)
+  - **System message** in chat history
+
+#### 5. Test the Chatbot
+Click the chat icon (💬) in the bottom-right corner and try these messages:
+- "hello" - Greeting
+- "how to add device" - Device management help
+- "alert" - Information about overconsumption alerts
+- "factura" - Billing information
+- "admin" - Contact administrator
+- Any other question - Default response
+
+## 📊 Architecture Overview
+
+### Microservices Communication
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Simulator  │────▶│   RabbitMQ   │────▶│ Monitoring  │
+│   (Python)  │     │              │     │  Service    │
+└─────────────┘     └──────┬───────┘     └──────┬──────┘
+                           │                     │
+                           │                     │ (Overconsumption)
+                           │                     ▼
+                    ┌──────▼───────┐     ┌─────────────┐
+                    │   WebSocket  │◀────│  Alert      │
+                    │   Service    │     │  Publisher  │
+                    └──────┬───────┘     └─────────────┘
+                           │
+                           │ (WebSocket/STOMP)
+                           ▼
+                    ┌─────────────┐
+                    │   Frontend  │
+                    │   (React)   │
+                    └─────────────┘
+```
+
+### Chat Flow
+```
+User Message ──▶ WebSocket ──▶ RabbitMQ ──▶ Chat Service ──▶ Rule Engine
+                                                    │
+                                                    ▼
+                                            ┌───────────────┐
+                                            │ 14+ Rules     │
+                                            │ - Greeting    │
+                                            │ - Device Help │
+                                            │ - Alerts      │
+                                            │ - Billing     │
+                                            │ - etc.        │
+                                            └───────┬───────┘
+                                                    │
+Bot Response ◀── WebSocket ◀── RabbitMQ ◀──────────┘
+```
 
 ## Database (PostgreSQL) — ( !!! Create it first !!!)
 The app expects a PostgreSQL database to already exist. Default connection values:
@@ -356,3 +490,269 @@ Frontend environment variables can be set in `/frontend/.env`:
 REACT_APP_API_URL=http://localhost
 GENERATE_SOURCEMAP=false
 ```
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        RabbitMQ Communication Schema                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 1. USER & DEVICE SYNC EVENTS (Broadcast - Fanout Exchange)                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │ demo Service │ (SyncPublisherService)
+    └──────┬───────┘
+           │ publishes: user, user_deleted events
+           ↓
+    ┌──────────────────────────┐
+    │ sync.events.exchange     │ (FANOUT - broadcast to all)
+    │ (durable)                │
+    └──────┬───────────────────┘
+           │
+           ├──────────────────────────────────────────────────┐
+           │                                                  │
+           ↓                                                  ↓
+    ┌─────────────────┐                            ┌──────────────────┐
+    │ sync.events.device queue                     │ Simulator        │
+    └────────┬────────┘                            └────────┬─────────┘
+             │                                              │
+             ↓                                              ↓
+    ┌─────────────────────┐                       • Caches max_consumption
+    │ microserviceDevice  │                       • Detects device_deleted
+    │ (UserCacheService)  │                       • Auto-stops simulation
+    └─────────────────────┘
+             │
+             ↓
+    • Caches user data locally
+    • Handles user_deleted events
+
+
+    ┌────────────────────┐
+    │ microserviceDevice │ (SyncPublisherService)
+    └──────────┬─────────┘
+               │ publishes: device, device_deleted events
+               │            (includes max_consumption)
+               ↓
+    ┌──────────────────────────┐
+    │ sync.events.exchange     │ (FANOUT - reuses same exchange)
+    │ (durable)                │
+    └──────┬───────────────────┘
+           │
+           ├──────────────────────────────────────────────────┐
+           │                                                  │
+           ↓                                                  ↓
+    ┌─────────────────┐                            ┌──────────────────┐
+    │ sync.events.device queue                     │ Simulator        │
+    └────────┬────────┘                            └────────┬─────────┘
+             │                                              │
+             ↓                                              ↓
+    ┌─────────────────────┐                       • Receives device events
+    │ microserviceDevice  │                       • Caches max_consumption
+    │ (UserCacheService)  │                       • Clamps measurements
+    └─────────────────────┘
+
+## 🐛 Troubleshooting
+
+### WebSocket Connection Issues
+```bash
+# Check if websocket service is running
+docker-compose ps websocket-service
+
+# Check logs
+docker-compose logs -f websocket-service
+
+# Verify RabbitMQ connection
+docker-compose exec websocket-service curl localhost:8085/actuator/health
+```
+
+### Chat Not Responding
+```bash
+# Check chat service logs
+docker-compose logs -f chat-service
+
+# Verify RabbitMQ queues exist
+# Go to http://localhost:15672 and check:
+# - chat.user.messages
+# - chat.bot.responses
+```
+
+### No Overconsumption Alerts
+1. Verify device has `max_consumption` set
+2. Check monitoring service is processing data:
+   ```bash
+   docker-compose logs -f monitoring
+   ```
+3. Ensure WebSocket is connected (check browser console)
+4. Verify overconsumption queue exists in RabbitMQ
+
+### Frontend Not Loading
+```bash
+# Rebuild frontend
+docker-compose build frontend
+docker-compose up -d frontend
+
+# Check logs
+docker-compose logs frontend
+```
+
+### Database Connection Errors
+```bash
+# Check all databases are running
+docker-compose ps | grep db
+
+# Restart databases
+docker-compose restart db1 db2 db-auth monitoring-db
+```
+
+## 📝 Assignment 3 Checklist
+
+### Minimum Requirements (5 points) ✅
+- [x] WebSocket Microservice for overconsumption notifications
+- [x] Integration with Assignment 2 (monitoring)
+- [x] Rule-based chatbot with 10+ rules (implemented 14 rules)
+- [x] README.md with build and execution instructions
+- [x] Docker deployment with docker-compose
+
+### Bonus Features (Optional)
+- [ ] AI-driven customer support (+1p) - Architecture ready
+- [ ] Client-Admin chat integration (+2p) - Architecture ready
+- [ ] Load balancing service (+2p) - Can be added
+
+### Project Requirements (10 points)
+- [x] Traefik reverse proxy configured
+- [x] Docker deployment with multiple services
+- [ ] UML Deployment diagram (needs to be created)
+
+## 📚 Technologies Used
+
+- **Backend**: Spring Boot 3.2.0, Java 17
+- **Frontend**: React 18, WebSocket (SockJS + STOMP)
+- **Message Broker**: RabbitMQ 3
+- **Databases**: PostgreSQL 16
+- **Reverse Proxy**: Traefik 2.11
+- **Containerization**: Docker, Docker Compose
+- **Real-time**: WebSocket, STOMP protocol
+- **AI Ready**: Gemini/OpenAI integration prepared
+
+## 👥 Contact
+
+For questions or issues regarding Assignment 3:
+- Check RabbitMQ Management UI for message flow
+- Review docker-compose logs for each service
+- Verify WebSocket connections in browser console
+- Test rules by sending messages in chat
+
+---
+
+**Assignment 3 - Distributed Systems 2025-2026**  
+Faculty of Automation and Computer Science, UTCN
+             │
+             ↓
+    • Updates user_cache with device info
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 2. USER COMMANDS (Targeted - Direct Queue)                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │ demo Service │ (SyncPublisherService)
+    └──────┬───────┘
+           │ publishes: delete_user_devices command
+           ↓
+    ┌──────────────────────────┐
+    │ user.commands queue      │ (durable, direct)
+    │                          │
+    └──────┬───────────────────┘
+           │
+           ↓
+    ┌──────────────────────────────┐
+    │ microserviceDevice           │ (UserCommandsConsumerService)
+    └──────────────────────────────┘
+           │
+           ↓
+    • Receives delete_user_devices command
+    • Calls detachDevicesFromUser(userId)
+    • Sets userId = NULL for all user's devices
+    • Publishes device sync events
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 3. AUTH COMMANDS (Targeted - Direct Queue)                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │ demo Service │ (AuthSyncService)
+    └──────┬───────┘
+           │ publishes: create_auth_user, update_auth_user, delete_auth_user
+           ↓
+    ┌──────────────────────────┐
+    │ auth.commands queue      │ (durable, direct)
+    │                          │
+    └──────┬───────────────────┘
+           │
+           ↓
+    ┌──────────────────────────┐
+    │ AuthService              │ (AuthCommandsConsumer)
+    └──────────────────────────┘
+           │
+           ↓
+    • Receives auth commands
+    • Creates/updates/deletes users in authdb
+    • Encodes passwords with BCrypt
+    • Assigns roles (ROLE_USER, ROLE_ADMIN)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 4. ENERGY DATA STREAM (Direct Queue - High Volume)                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │ Simulator    │ (Python script)
+    └──────┬───────┘
+           │ publishes: {timestamp, device_id, measurement_value}
+           │ Rate: ~0.20/sec per device (every 5 seconds)
+           ↓
+    ┌──────────────────────────┐
+    │ energy_data queue        │ (non-durable, direct)
+    │                          │
+    └──────┬───────────────────┘
+           │
+           ↓
+    ┌──────────────────────────────┐
+    │ monitoring Service           │ (DeviceDataConsumerService)
+    └──────────────────────────────┘
+           │
+           ↓
+    • Receives raw measurements
+    • Stores in device_data table
+    • Aggregates into hourly_energy_consumption
+    • Groups by device_id and hour
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SUMMARY                                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Exchanges:
+  • sync.events.exchange (fanout, durable) - broadcasts all sync events
+
+Queues:
+  • sync.events.device (durable) - device service listens for user/device events
+  • user.commands (durable) - device service listens for user commands
+  • auth.commands (durable) - auth service listens for auth commands
+  • energy_data (non-durable) - monitoring service listens for measurements
+
+Producers:
+  • demo Service → sync events, user commands, auth commands
+  • microserviceDevice → device sync events
+  • Simulator → energy measurements
+
+Consumers:
+  • microserviceDevice → sync events, user commands
+  • AuthService → auth commands
+  • monitoring Service → energy data
+  • Simulator → device sync events (for max_consumption & auto-stop)
+
+Pattern: Event-driven microservices - zero HTTP between services, all via RabbitMQ

@@ -1,0 +1,7 @@
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/service/AdminChatService.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/CustomerSupportApplication.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/service/RuleBasedChatbotService.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/config/RabbitMQConfig.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/model/ChatMessage.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/service/ChatService.java
+/home/iulia/ds2025_30242_joarza_iulia_maria/chat/src/main/java/com/example/chat/service/AIService.java

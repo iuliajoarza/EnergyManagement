@@ -16,15 +16,18 @@ public class SyncPublisherService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void publishDeviceSync(String deviceId, String name) {
+    public void publishDeviceSync(String deviceId, String name, Double maxConsumption) {
         try {
             Map<String, Object> event = new HashMap<>();
             event.put("type", "device");
             event.put("device_id", deviceId);
             
-            Map<String, String> attributes = new HashMap<>();
+            Map<String, Object> attributes = new HashMap<>();
             if (name != null) {
                 attributes.put("name", name);
+            }
+            if (maxConsumption != null) {
+                attributes.put("max_consumption", maxConsumption);
             }
             event.put("attributes", attributes);
             

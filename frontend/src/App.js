@@ -7,6 +7,7 @@ import Register from './components/Register';
 import People from './components/People';
 import Devices from './components/Devices';
 import EnergyConsumption from './components/EnergyConsumption';
+import AdminChat from './components/AdminChat';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
@@ -29,6 +30,11 @@ function App() {
             <Route path="people" element={
               <AdminRoute>
                 <People />
+              </AdminRoute>
+            } />
+            <Route path="admin-chat" element={
+              <AdminRoute>
+                <AdminChat />
               </AdminRoute>
             } />
             <Route path="devices" element={<Devices />} />

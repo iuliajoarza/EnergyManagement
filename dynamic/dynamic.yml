@@ -9,8 +9,24 @@ http:
       stripPrefix:
         prefixes:
           - "/api"
+    
+    websocket-headers:
+      headers:
+        customRequestHeaders:
+          Connection: Upgrade
+          Upgrade: websocket
 
   routers:
+    # WebSocket route - must be high priority and before frontend
+    websocket:
+      rule: "Host(`localhost`) && PathPrefix(`/ws`)"
+      service: websocket-service
+      entryPoints:
+        - web
+      priority: 50
+      middlewares:
+        - websocket-headers
+
     # Frontend - highest priority
     frontend-app:
       rule: "Host(`localhost`) && !PathPrefix(`/api`)"
@@ -73,7 +89,7 @@ http:
     frontend-service:
       loadBalancer:
         servers:
-          - url: "http://frontend:80"
+          - url: "http://frontend:3000"
 
     people-service:
       loadBalancer:
@@ -100,6 +116,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://spring-demo2:8080"
+
+    websocket-service:
+      loadBalancer:
+        servers:
+          - url: "http://websocket-service:8085"
 
     auth-service-swagger:
       loadBalancer:

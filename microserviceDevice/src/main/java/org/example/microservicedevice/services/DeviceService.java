@@ -79,8 +79,8 @@ public class DeviceService {
         device = deviceRepository.save(device);
         LOGGER.debug("Device with id {} was inserted in db", device.getId());
         
-        // Publish device sync event
-        syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName());
+        // Publish device sync event with max_consumption
+        syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName(), device.getMaxConsumption());
         
         return device.getId();
     }
@@ -97,6 +97,8 @@ public class DeviceService {
         d.setMaxConsumption(dto.getMaxConsumption());
         d.setUserId(dto.getUserId());
         deviceRepository.save(d);
+        // Publish sync event on update to refresh simulator cache
+        syncPublisherService.publishDeviceSync(d.getId().toString(), d.getName(), d.getMaxConsumption());
         LOGGER.debug("Device with id {} was updated", id);
     }
 
@@ -124,8 +126,10 @@ public class DeviceService {
         List<Device> devices = deviceRepository.findByUserId(userId);
         for (Device device : devices) {
             device.setUserId(null);
+            deviceRepository.save(device);
+            // Publish device update event so other services know about the change
+            syncPublisherService.publishDeviceSync(device.getId().toString(), device.getName(), device.getMaxConsumption());
         }
-        deviceRepository.saveAll(devices);
         LOGGER.debug("All devices for user {} were detached (userId set to null)", userId);
     }
 

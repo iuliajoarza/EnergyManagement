@@ -1,26 +1,37 @@
 package com.example.monitoring.service;
 
 import com.example.monitoring.entity.DeviceData;
+import com.example.monitoring.entity.DeviceInfo;
 import com.example.monitoring.entity.HourlyEnergyConsumption;
 import com.example.monitoring.repository.DeviceDataRepository;
+import com.example.monitoring.repository.DeviceInfoRepository;
 import com.example.monitoring.repository.HourlyEnergyConsumptionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 @Service
 public class DeviceDataConsumerService {
     private final DeviceDataRepository repository;
     private final HourlyEnergyConsumptionRepository hourlyRepository;
+    private final DeviceInfoRepository deviceInfoRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    @Autowired
+    private NotificationService notificationService;
 
-    public DeviceDataConsumerService(DeviceDataRepository repository, HourlyEnergyConsumptionRepository hourlyRepository) {
+    public DeviceDataConsumerService(DeviceDataRepository repository, 
+                                    HourlyEnergyConsumptionRepository hourlyRepository,
+                                    DeviceInfoRepository deviceInfoRepository) {
         this.repository = repository;
         this.hourlyRepository = hourlyRepository;
+        this.deviceInfoRepository = deviceInfoRepository;
     }
 
     public void receiveMessage(byte[] messageBytes) {
@@ -40,12 +51,46 @@ public class DeviceDataConsumerService {
             repository.save(data);
             System.out.println("=== Successfully saved device data: " + deviceId + " - " + measurementValue);
             
+            // Check for overconsumption and send alert
+            checkOverconsumption(deviceId, measurementValue);
+            
             // Aggregate hourly energy consumption
             aggregateHourlyConsumption(deviceId, measurementValue, timestamp);
             
         } catch (Exception e) {
             System.err.println("=== Error processing message: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Check if device consumption exceeds maximum and send alert
+     */
+    private void checkOverconsumption(String deviceId, Double currentConsumption) {
+        try {
+            Optional<DeviceInfo> deviceInfoOpt = deviceInfoRepository.findByDeviceId(deviceId);
+            if (deviceInfoOpt.isPresent()) {
+                DeviceInfo deviceInfo = deviceInfoOpt.get();
+                Double maxConsumption = deviceInfo.getMaxConsumption();
+                String username = deviceInfo.getUsername();
+                
+                if (maxConsumption != null && currentConsumption > maxConsumption) {
+                    System.out.println("=== OVERCONSUMPTION DETECTED: Device " + deviceId + 
+                                     " - Current: " + currentConsumption + " kW, Max: " + maxConsumption + " kW");
+                    
+                    // Send notification via RabbitMQ to WebSocket microservice
+                    // Use username if available, fallback to user_id
+                    String notificationUserId = (username != null && !username.isEmpty()) ? username : deviceInfo.getUserId();
+                    notificationService.sendOverconsumptionAlert(
+                        notificationUserId, 
+                        deviceId, 
+                        currentConsumption, 
+                        maxConsumption
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("=== Error checking overconsumption: " + e.getMessage());
         }
     }
     
