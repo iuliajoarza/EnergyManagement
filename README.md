@@ -108,10 +108,6 @@ demo/
 - **Java 17+** (for local development)
 - **PostgreSQL** (automatically handled by Docker)
 
-### Build and Run All Services
-```bash
-# Set JWT secret (important!)
-export JWT_SECRET=iuliaiuliaiuliaiuliaiuliaiulia01112003
 
 # Build and start all services
 docker-compose up --build
